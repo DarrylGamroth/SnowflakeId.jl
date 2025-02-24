@@ -1,5 +1,6 @@
 module SnowflakeId
 
+using Clocks
 using Hwloc
 using LibUV_jll
 
@@ -15,28 +16,6 @@ const MAX_NODE_ID_AND_SEQUENCE_BITS = 22
 const NODE_ID_BITS_DEFAULT = 10
 # Default number of bits used to represent the sequence within a millisecond, supporting 4,096,000 ids per second per node.
 const SEQUENCE_BITS_DEFAULT = 12
-
-@enum uv_clockid_t begin
-    UV_CLOCK_MONOTONIC = 0
-    UV_CLOCK_REALTIME = 1
-end
-
-struct uv_timespec
-    tv_sec::Int64
-    tv_nsec::Int32
-end
-
-function uv_clock_gettime(clockid::uv_clockid_t)
-    ts = Ref{uv_timespec}()
-    status = @ccall uv_clock_gettime(clockid::Cint, ts::Ref{uv_timespec})::Cint
-    status != 0 && error("unable to determine current time: ", status)
-    return ts[]
-end
-
-function gettime_ms()
-    timespec = uv_clock_gettime(UV_CLOCK_REALTIME)
-    return timespec.tv_sec * 1000 + timespec.tv_nsec ÷ 1_000_000
-end
 
 """
     Generate unique identifiers based on the Twitter
@@ -57,8 +36,9 @@ mutable struct SnowflakeIdGenerator
     const max_sequence::Int64
     const node_bits::Int64
     const timestamp_offset_ms::Int64
+    const clock::EpochClock
 
-    function SnowflakeIdGenerator(node_id_bits::Int, sequence_bits::Int, node_id::Int64, timestamp_offset_ms::Int64=0)
+    function SnowflakeIdGenerator(node_id_bits::Int, sequence_bits::Int, node_id::Int64, timestamp_offset_ms::Int64, clock::EpochClock)
         if node_id_bits < 0
             throw(ArgumentError("must be >= 0: node_id_bits=$node_id_bits"))
         end
@@ -80,7 +60,7 @@ mutable struct SnowflakeIdGenerator
             throw(ArgumentError("must be >= 0: timestamp_offset_ms=$timestamp_offset_ms"))
         end
 
-        now_ms = gettime_ms()
+        now_ms = time_millis(clock)
         if timestamp_offset_ms > now_ms
             throw(ArgumentError("timestamp_offset_ms=$timestamp_offset_ms > now_ms=$now_ms"))
         end
@@ -89,18 +69,19 @@ mutable struct SnowflakeIdGenerator
         node_bits = node_id << sequence_bits
 
         new(ntuple(x -> Int8(0), CACHE_LINE_PAD),
-        0,
-        ntuple(x -> Int8(0), CACHE_LINE_PAD),
-        node_id_and_sequence_bits, 
-        sequence_bits, 
-        max_node_id, 
-        max_sequence, 
-        node_bits, 
-        timestamp_offset_ms)
+            0,
+            ntuple(x -> Int8(0), CACHE_LINE_PAD),
+            node_id_and_sequence_bits,
+            sequence_bits,
+            max_node_id,
+            max_sequence,
+            node_bits,
+            timestamp_offset_ms,
+            clock)
     end
 end
 
-SnowflakeIdGenerator(node_id::Int64) = SnowflakeIdGenerator(NODE_ID_BITS_DEFAULT, SEQUENCE_BITS_DEFAULT, node_id, 0)
+SnowflakeIdGenerator(node_id::Int64) = SnowflakeIdGenerator(NODE_ID_BITS_DEFAULT, SEQUENCE_BITS_DEFAULT, node_id, 0, EpochClock())
 
 
 """
@@ -146,7 +127,7 @@ this implementation will busy spin until the next millisecond.
 function next_id(g::SnowflakeIdGenerator)
     while true
         old_timestamp_sequence = @atomic g.timestamp_sequence
-        timestamp_ms = gettime_ms() - g.timestamp_offset_ms
+        timestamp_ms = time_millis(g.clock) - g.timestamp_offset_ms
         old_timestamp_ms = old_timestamp_sequence >>> g.node_id_and_sequence_bits
 
         if timestamp_ms > old_timestamp_ms

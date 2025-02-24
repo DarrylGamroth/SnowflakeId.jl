@@ -1,12 +1,14 @@
 name = "SnowflakeId"
 uuid = "f9ebe2b0-2178-47c6-b9d1-20f9bee126a8"
 authors = ["Darryl Gamroth <dgamroth@rubus.ca>"]
-version = "0.1.0"
+version = "0.1.1"
 
 [deps]
+Clocks = "6b5ade5d-6e95-4584-b343-73eec2e8782b"
 Hwloc = "0e44f5e4-bd66-52a0-8798-143a42290a1d"
 LibUV_jll = "183b4373-6708-53ba-ad28-60e28bb38547"
 
 [compat]
+Clocks = "0.1.1"
 Hwloc = "3.3.0"
 LibUV_jll = "2.0.1"
