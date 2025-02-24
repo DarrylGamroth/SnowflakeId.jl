@@ -1,7 +1,7 @@
 name = "SnowflakeId"
 uuid = "f9ebe2b0-2178-47c6-b9d1-20f9bee126a8"
 authors = ["Darryl Gamroth <dgamroth@rubus.ca>"]
-version = "0.1.1"
+version = "0.1.2"
 
 [deps]
 Clocks = "6b5ade5d-6e95-4584-b343-73eec2e8782b"

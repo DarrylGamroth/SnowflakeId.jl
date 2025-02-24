@@ -36,9 +36,9 @@ mutable struct SnowflakeIdGenerator
     const max_sequence::Int64
     const node_bits::Int64
     const timestamp_offset_ms::Int64
-    const clock::EpochClock
+    const clock::AbstractClock
 
-    function SnowflakeIdGenerator(node_id_bits::Int, sequence_bits::Int, node_id::Int64, timestamp_offset_ms::Int64, clock::EpochClock)
+    function SnowflakeIdGenerator(node_id_bits::Int, sequence_bits::Int, node_id::Int64, timestamp_offset_ms::Int64, clock::AbstractClock)
         if node_id_bits < 0
             throw(ArgumentError("must be >= 0: node_id_bits=$node_id_bits"))
         end
@@ -82,6 +82,7 @@ mutable struct SnowflakeIdGenerator
 end
 
 SnowflakeIdGenerator(node_id::Int64) = SnowflakeIdGenerator(NODE_ID_BITS_DEFAULT, SEQUENCE_BITS_DEFAULT, node_id, 0, EpochClock())
+SnowflakeIdGenerator(node_id::Int64, clock::AbstractClock) = SnowflakeIdGenerator(NODE_ID_BITS_DEFAULT, SEQUENCE_BITS_DEFAULT, node_id, 0, clock)
 
 
 """
