@@ -9,6 +9,7 @@ Hwloc = "0e44f5e4-bd66-52a0-8798-143a42290a1d"
 LibUV_jll = "183b4373-6708-53ba-ad28-60e28bb38547"
 
 [compat]
+Julia = "1.11"
 Clocks = "0.2"
 Hwloc = "3"
 LibUV_jll = "2"
