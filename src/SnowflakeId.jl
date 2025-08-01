@@ -2,7 +2,6 @@ module SnowflakeId
 
 using Clocks
 using Hwloc
-using LibUV_jll
 
 export SnowflakeIdGenerator,
     node_id,
@@ -14,7 +13,7 @@ export SnowflakeIdGenerator,
     node_id,
     sequence
 
-const CACHE_LINE_SIZE::Int = maximum(cachelinesize())
+const CACHE_LINE_SIZE::Int = cachelinesize(:L1)
 const CACHE_LINE_PAD::Int = CACHE_LINE_SIZE - sizeof(Int64)
 # Number of bits used for the timestamp, allowing for 69 years from `timestamp_offset_ms()`.
 const EPOCH_BITS::Int = 41
