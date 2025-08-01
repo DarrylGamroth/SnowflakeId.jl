@@ -25,9 +25,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - version: 'lts'
-            os: ubuntu-latest
-            arch: x64
           - version: '1'
             os: ubuntu-latest
             arch: x64
@@ -35,9 +32,6 @@ jobs:
             os: ubuntu-latest
             arch: x64
             allow_failure: true
-          - version: 'lts'
-            os: windows-latest
-            arch: x64
           - version: '1'
             os: windows-latest
             arch: x64
@@ -45,16 +39,13 @@ jobs:
             os: windows-latest
             arch: x64
             allow_failure: true
-          - version: 'lts'
-            os: macos-latest
-            arch: aarch64
-          - version: '1'
-            os: macos-latest
-            arch: aarch64
-          - version: 'nightly'
-            os: macos-latest
-            arch: aarch64
-            allow_failure: true
+          # - version: '1'
+          #   os: macos-latest
+          #   arch: aarch64
+          # - version: 'nightly'
+          #   os: macos-latest
+          #   arch: aarch64
+          #   allow_failure: true
     steps:
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@v2

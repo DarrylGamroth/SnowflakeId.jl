@@ -12,3 +12,9 @@ LibUV_jll = "183b4373-6708-53ba-ad28-60e28bb38547"
 Clocks = "0.2"
 Hwloc = "3"
 LibUV_jll = "2"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
