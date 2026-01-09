@@ -17,3 +17,6 @@ s = SnowflakeIdGenerator(123)
 # Get the next id
 id = next_id(s)
 ```
+
+## Clock behavior
+This generator detects clock regressions; if the system clock moves backwards relative to the last observed timestamp, `next_id` will throw an `ArgumentError`. Ensure your time source is monotonic (e.g., NTP configured properly) to avoid regressions.

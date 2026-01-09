@@ -1,4 +1,9 @@
 @testset "Constructor Tests" begin
+    struct FixedClock <: AbstractClock
+        now_ms::Int64
+    end
+    Clocks.time_millis(c::FixedClock) = c.now_ms
+
     @testset "Default constructor" begin
         node_id = 123
         generator = SnowflakeIdGenerator(node_id)
@@ -65,6 +70,12 @@
         clock = EpochClock()
         future_offset = time_millis(clock) + 10000  # 10 seconds in future
         @test_throws ArgumentError SnowflakeIdGenerator(10, 12, 1, future_offset, clock)
+    end
+
+    @testset "Constructor validation - timestamp range overflow" begin
+        now_ms = (Int64(1) << 41) + 10
+        clock = FixedClock(now_ms)
+        @test_throws ArgumentError SnowflakeIdGenerator(10, 12, 1, 0, clock)
     end
     
     @testset "Boundary values" begin

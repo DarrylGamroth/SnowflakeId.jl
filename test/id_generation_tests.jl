@@ -73,17 +73,15 @@
     @testset "ID generation with timestamp offset" begin
         offset = 1640995200000  # Jan 1, 2022 in milliseconds
         generator = SnowflakeIdGenerator(10, 12, 123, offset, EpochClock())
-        
+
+        before_time = time_millis(EpochClock())
         id = next_id(generator)
+        after_time = time_millis(EpochClock())
         timestamp_part = SnowflakeId.timestamp(generator, id)
-        
-        # Timestamp should be relative to offset
-        @test timestamp_part >= 0
-        
-        # The actual timestamp should be offset + timestamp_part
-        current_time = time_millis(EpochClock())
-        actual_timestamp = offset + timestamp_part
-        @test actual_timestamp <= current_time  # Should not be in the future
+
+        # Timestamp should be epoch milliseconds
+        @test timestamp_part >= before_time
+        @test timestamp_part <= after_time
     end
     
     @testset "Zero sequence bits edge case" begin

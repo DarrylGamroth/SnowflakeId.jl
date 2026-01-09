@@ -66,12 +66,15 @@
     @testset "Parsing with timestamp offset" begin
         offset = 1609459200000  # Jan 1, 2021 in milliseconds
         generator = SnowflakeIdGenerator(10, 12, 123, offset, EpochClock())
-        
+
+        before_time = time_millis(EpochClock())
         id = next_id(generator)
-        
-        # The timestamp in the ID should be relative to the offset
+        after_time = time_millis(EpochClock())
+
+        # The timestamp in the ID should be epoch milliseconds
         timestamp_part = SnowflakeId.timestamp(generator, id)
-        @test timestamp_part >= 0
+        @test timestamp_part >= before_time
+        @test timestamp_part <= after_time
         
         # Node ID should still be correct
         @test SnowflakeId.node_id(generator, id) == 123

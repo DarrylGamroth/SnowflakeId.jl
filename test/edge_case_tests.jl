@@ -49,13 +49,15 @@
         
         if large_offset < current_time
             generator = SnowflakeIdGenerator(10, 12, 123, large_offset, clock)
-            
+
+            before_time = time_millis(clock)
             id = next_id(generator)
+            after_time = time_millis(clock)
             @test id > 0
             
             timestamp_part = SnowflakeId.timestamp(generator, id)
-            @test timestamp_part >= 0
-            @test timestamp_part == current_time - large_offset
+            @test timestamp_part >= before_time
+            @test timestamp_part <= after_time
         else
             # Skip if offset would be in the future
             @test_skip "Large offset test skipped - would be in future"
@@ -126,7 +128,7 @@
         # An ID should have the structure: [timestamp][node_id][sequence]
         # Let's verify the bit layout makes sense
         
-        timestamp_part = SnowflakeId.timestamp(generator, id)
+        timestamp_part = SnowflakeId.timestamp(generator, id) - SnowflakeId.timestamp_offset_ms(generator)
         node_part = SnowflakeId.node_id(generator, id)
         sequence_part = SnowflakeId.sequence(generator, id)
         
@@ -140,6 +142,40 @@
                        sequence_part
         
         @test reconstructed == id
+    end
+
+    @testset "Timestamp overflow" begin
+        struct OverflowClock <: AbstractClock
+            now_ms::Int64
+        end
+        Clocks.time_millis(c::OverflowClock) = c.now_ms
+
+        offset = 0
+        overflow_time = (Int64(1) << 41) + 1
+        clock = OverflowClock(overflow_time)
+
+        @test_throws ArgumentError SnowflakeIdGenerator(10, 12, 123, offset, clock)
+    end
+
+    @testset "Clock regression detection" begin
+        mutable struct StepClock <: AbstractClock
+            times::Vector{Int64}
+            idx::Int
+        end
+        function Clocks.time_millis(c::StepClock)
+            if c.idx <= length(c.times)
+                t = c.times[c.idx]
+                c.idx += 1
+                return t
+            end
+            return c.times[end]
+        end
+
+        clock = StepClock([1000, 1001, 1000], 1)
+        generator = SnowflakeIdGenerator(10, 12, 123, 0, clock)
+
+        @test next_id(generator) > 0
+        @test_throws ArgumentError next_id(generator)
     end
     
     @testset "Large ID values" begin
