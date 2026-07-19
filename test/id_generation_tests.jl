@@ -1,3 +1,9 @@
+# Copyright 2014-2025 Real Logic Limited.
+# Copyright 2025-2026 Rubus Technologies Inc.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ported from Agrona and substantially modified for Julia.
+
 @testset "ID Generation Tests" begin
     @testset "Basic ID generation" begin
         generator = SnowflakeIdGenerator(123)
@@ -45,7 +51,7 @@
     
     @testset "ID generation with custom bit allocation" begin
         # Use 6 bits for node_id (max 63) and 16 bits for sequence (max 65535)
-        generator = SnowflakeIdGenerator(6, 16, 42, 0, EpochClock())
+        generator = SnowflakeIdGenerator(6, 16, 42, 0, SystemEpochClock())
         
         id = next_id(generator)
         @test id > 0
@@ -72,11 +78,11 @@
     
     @testset "ID generation with timestamp offset" begin
         offset = 1640995200000  # Jan 1, 2022 in milliseconds
-        generator = SnowflakeIdGenerator(10, 12, 123, offset, EpochClock())
+        generator = SnowflakeIdGenerator(10, 12, 123, offset, SystemEpochClock())
 
-        before_time = time_millis(EpochClock())
+        before_time = time_millis(SystemEpochClock())
         id = next_id(generator)
-        after_time = time_millis(EpochClock())
+        after_time = time_millis(SystemEpochClock())
         timestamp_part = SnowflakeId.timestamp(generator, id)
 
         # Timestamp should be epoch milliseconds
@@ -86,7 +92,7 @@
     
     @testset "Zero sequence bits edge case" begin
         # With 0 sequence bits, we can only generate 1 ID per millisecond
-        generator = SnowflakeIdGenerator(22, 0, 0, 0, EpochClock())
+        generator = SnowflakeIdGenerator(22, 0, 0, 0, SystemEpochClock())
         
         id = next_id(generator)
         @test id > 0
@@ -96,7 +102,7 @@
     
     @testset "Zero node bits edge case" begin
         # With 0 node bits, node_id must be 0
-        generator = SnowflakeIdGenerator(0, 22, 0, 0, EpochClock())
+        generator = SnowflakeIdGenerator(0, 22, 0, 0, SystemEpochClock())
         
         id = next_id(generator)
         @test id > 0

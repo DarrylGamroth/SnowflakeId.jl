@@ -1,7 +1,13 @@
+# Copyright 2014-2025 Real Logic Limited.
+# Copyright 2025-2026 Rubus Technologies Inc.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ported from Agrona and substantially modified for Julia.
+
 @testset "Edge Case Tests" begin
     @testset "Minimum configuration" begin
         # Test with minimum possible configuration: 0 node bits, 22 sequence bits
-        generator = SnowflakeIdGenerator(0, 22, 0, 0, EpochClock())
+        generator = SnowflakeIdGenerator(0, 22, 0, 0, SystemEpochClock())
         
         id = next_id(generator)
         @test id > 0
@@ -12,7 +18,7 @@
     
     @testset "Maximum configuration" begin
         # Test with maximum possible configuration: 22 node bits, 0 sequence bits
-        generator = SnowflakeIdGenerator(22, 0, 2^22-1, 0, EpochClock())
+        generator = SnowflakeIdGenerator(22, 0, 2^22-1, 0, SystemEpochClock())
         
         id = next_id(generator)
         @test id > 0
@@ -23,7 +29,7 @@
     
     @testset "Single node bit" begin
         # Test with exactly 1 node bit (max node_id = 1)
-        generator = SnowflakeIdGenerator(1, 21, 1, 0, EpochClock())
+        generator = SnowflakeIdGenerator(1, 21, 1, 0, SystemEpochClock())
         
         id = next_id(generator)
         @test id > 0
@@ -33,7 +39,7 @@
     
     @testset "Single sequence bit" begin
         # Test with exactly 1 sequence bit (max sequence = 1)
-        generator = SnowflakeIdGenerator(21, 1, 100, 0, EpochClock())
+        generator = SnowflakeIdGenerator(21, 1, 100, 0, SystemEpochClock())
         
         id = next_id(generator)
         @test id > 0
@@ -44,7 +50,7 @@
     @testset "Large timestamp offset" begin
         # Test with a large timestamp offset (should still work)
         large_offset = 1000000000000  # Large but reasonable offset
-        clock = EpochClock()
+        clock = SystemEpochClock()
         current_time = time_millis(clock)
         
         if large_offset < current_time
@@ -66,7 +72,7 @@
     
     @testset "Sequence rollover behavior" begin
         # Create generator with small sequence bits to force rollover
-        generator = SnowflakeIdGenerator(20, 2, 1, 0, EpochClock())  # Only 2 sequence bits = max 3
+        generator = SnowflakeIdGenerator(20, 2, 1, 0, SystemEpochClock())  # Only 2 sequence bits = max 3
         
         # Generate enough IDs to potentially cause sequence rollover
         ids = Int64[]
@@ -84,8 +90,8 @@
     end
     
     @testset "Clock behavior with different clocks" begin
-        # Test with EpochClock
-        generator_epoch = SnowflakeIdGenerator(10, 12, 123, 0, EpochClock())
+        # Test with SystemEpochClock
+        generator_epoch = SnowflakeIdGenerator(10, 12, 123, 0, SystemEpochClock())
         id_epoch = next_id(generator_epoch)
         @test id_epoch > 0
         
@@ -104,7 +110,7 @@
         
         for (node_bits, seq_bits, node_id) in test_cases
             if node_id <= 2^node_bits - 1  # Ensure node_id is valid
-                generator = SnowflakeIdGenerator(node_bits, seq_bits, node_id, 0, EpochClock())
+                generator = SnowflakeIdGenerator(node_bits, seq_bits, node_id, 0, SystemEpochClock())
                 
                 id = next_id(generator)
                 @test id > 0
@@ -122,7 +128,7 @@
     end
     
     @testset "ID structure validation" begin
-        generator = SnowflakeIdGenerator(10, 12, 123, 0, EpochClock())
+        generator = SnowflakeIdGenerator(10, 12, 123, 0, SystemEpochClock())
         id = next_id(generator)
         
         # An ID should have the structure: [timestamp][node_id][sequence]
@@ -145,7 +151,7 @@
     end
 
     @testset "Timestamp overflow" begin
-        struct OverflowClock <: AbstractClock
+        struct OverflowClock <: AbstractEpochClock
             now_ms::Int64
         end
         Clocks.time_millis(c::OverflowClock) = c.now_ms
@@ -158,7 +164,7 @@
     end
 
     @testset "Clock regression detection" begin
-        mutable struct StepClock <: AbstractClock
+        mutable struct StepClock <: AbstractEpochClock
             times::Vector{Int64}
             idx::Int
         end

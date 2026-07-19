@@ -1,7 +1,12 @@
+# Copyright 2014-2025 Real Logic Limited.
+# Copyright 2025-2026 Rubus Technologies Inc.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ported from Agrona and substantially modified for Julia.
+
 module SnowflakeId
 
 using Clocks
-using Hwloc
 
 export SnowflakeIdGenerator,
     node_id,
@@ -12,10 +17,9 @@ export SnowflakeIdGenerator,
     timestamp,
     sequence
 
-const CACHE_LINE_SIZE::Int = let size = cachelinesize(:L1)
-    size <= 0 || size < sizeof(Int64) ? 64 : size
-end
-const CACHE_LINE_PAD::Int = CACHE_LINE_SIZE - sizeof(Int64)
+# A full 128-byte pad on each side isolates the atomic value across common
+# 64-byte and 128-byte cache-line sizes without topology discovery at load time.
+const CACHE_LINE_PAD::Int = 128
 # Number of bits used for the timestamp, allowing for 69 years from `timestamp_offset_ms()`.
 const EPOCH_BITS::Int = 41
 # Maximum timestamp in milliseconds (relative to timestamp_offset_ms) representable with `EPOCH_BITS`.
@@ -36,7 +40,7 @@ This implementation is lock-less resulting in greater throughput plus less conte
 !!! note
     ntpd, or alternative clock source, should be setup correctly to ensure the clock does not go backwards.
 """
-mutable struct SnowflakeIdGenerator{C<:AbstractClock}
+mutable struct SnowflakeIdGenerator{C<:AbstractEpochClock}
     const pad1::NTuple{CACHE_LINE_PAD,Int8}
     @atomic timestamp_sequence::Int64
     const pad2::NTuple{CACHE_LINE_PAD,Int8}
@@ -52,7 +56,7 @@ mutable struct SnowflakeIdGenerator{C<:AbstractClock}
         sequence_bits::Int,
         node_id::Int64,
         timestamp_offset_ms::Int64,
-        clock::C) where {C<:AbstractClock}
+        clock::C) where {C<:AbstractEpochClock}
 
         if node_id_bits < 0
             throw(ArgumentError("must be >= 0: node_id_bits=$node_id_bits"))
@@ -99,8 +103,8 @@ mutable struct SnowflakeIdGenerator{C<:AbstractClock}
     end
 end
 
-SnowflakeIdGenerator(node_id::Int64) = SnowflakeIdGenerator(NODE_ID_BITS_DEFAULT, SEQUENCE_BITS_DEFAULT, node_id, 0, EpochClock())
-SnowflakeIdGenerator(node_id::Int64, clock::AbstractClock) = SnowflakeIdGenerator(NODE_ID_BITS_DEFAULT, SEQUENCE_BITS_DEFAULT, node_id, 0, clock)
+SnowflakeIdGenerator(node_id::Int64) = SnowflakeIdGenerator(NODE_ID_BITS_DEFAULT, SEQUENCE_BITS_DEFAULT, node_id, 0, SystemEpochClock())
+SnowflakeIdGenerator(node_id::Int64, clock::AbstractEpochClock) = SnowflakeIdGenerator(NODE_ID_BITS_DEFAULT, SEQUENCE_BITS_DEFAULT, node_id, 0, clock)
 
 """
     node_id(g::SnowflakeIdGenerator) -> Int

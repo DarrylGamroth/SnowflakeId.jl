@@ -1,3 +1,9 @@
+# Copyright 2014-2025 Real Logic Limited.
+# Copyright 2025-2026 Rubus Technologies Inc.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ported from Agrona and substantially modified for Julia.
+
 @testset "ID Parsing Tests" begin
     @testset "Timestamp extraction" begin
         generator = SnowflakeIdGenerator(123)
@@ -7,7 +13,7 @@
         @test timestamp_ms >= 0
         
         # Timestamp should be reasonable (not too far in past or future)
-        current_time = time_millis(EpochClock())
+        current_time = time_millis(SystemEpochClock())
         @test timestamp_ms <= current_time
         @test timestamp_ms >= current_time - 1000  # Within last second
     end
@@ -31,7 +37,7 @@
     end
     
     @testset "Multiple ID parsing consistency" begin
-        generator = SnowflakeIdGenerator(8, 14, 100, 0, EpochClock())
+        generator = SnowflakeIdGenerator(8, 14, 100, 0, SystemEpochClock())
         
         ids = [next_id(generator) for _ in 1:10]
         
@@ -53,7 +59,7 @@
     @testset "Parsing with custom bit allocation" begin
         # 5 bits for node (max 31), 17 bits for sequence (max 131071)
         node_id = 25
-        generator = SnowflakeIdGenerator(5, 17, node_id, 0, EpochClock())
+        generator = SnowflakeIdGenerator(5, 17, node_id, 0, SystemEpochClock())
         
         id = next_id(generator)
         
@@ -65,11 +71,11 @@
     
     @testset "Parsing with timestamp offset" begin
         offset = 1609459200000  # Jan 1, 2021 in milliseconds
-        generator = SnowflakeIdGenerator(10, 12, 123, offset, EpochClock())
+        generator = SnowflakeIdGenerator(10, 12, 123, offset, SystemEpochClock())
 
-        before_time = time_millis(EpochClock())
+        before_time = time_millis(SystemEpochClock())
         id = next_id(generator)
-        after_time = time_millis(EpochClock())
+        after_time = time_millis(SystemEpochClock())
 
         # The timestamp in the ID should be epoch milliseconds
         timestamp_part = SnowflakeId.timestamp(generator, id)
@@ -82,7 +88,7 @@
     
     @testset "Parsing edge cases - maximum values" begin
         # Test with maximum possible values
-        generator = SnowflakeIdGenerator(11, 11, 2047, 0, EpochClock())  # 11 bits = max 2047
+        generator = SnowflakeIdGenerator(11, 11, 2047, 0, SystemEpochClock())  # 11 bits = max 2047
         
         id = next_id(generator)
         
@@ -93,8 +99,8 @@
     
     @testset "Parsing consistency across different generators" begin
         # Create two generators with different configurations
-        gen1 = SnowflakeIdGenerator(8, 14, 100, 0, EpochClock())
-        gen2 = SnowflakeIdGenerator(12, 10, 200, 0, EpochClock())
+        gen1 = SnowflakeIdGenerator(8, 14, 100, 0, SystemEpochClock())
+        gen2 = SnowflakeIdGenerator(12, 10, 200, 0, SystemEpochClock())
         
         id1 = next_id(gen1)
         id2 = next_id(gen2)
@@ -111,12 +117,12 @@
     
     @testset "Round-trip consistency" begin
         # Test that we can generate an ID and parse all its components correctly
-        generator = SnowflakeIdGenerator(10, 12, 456, 0, EpochClock())
+        generator = SnowflakeIdGenerator(10, 12, 456, 0, SystemEpochClock())
         
         # Record current time before generation
-        before_time = time_millis(EpochClock())
+        before_time = time_millis(SystemEpochClock())
         id = next_id(generator)
-        after_time = time_millis(EpochClock())
+        after_time = time_millis(SystemEpochClock())
         
         # Parse components
         timestamp_part = SnowflakeId.timestamp(generator, id)
