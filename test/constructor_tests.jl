@@ -1,5 +1,11 @@
+# Copyright 2014-2025 Real Logic Limited.
+# Copyright 2025-2026 Rubus Technologies Inc.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ported from Agrona and substantially modified for Julia.
+
 @testset "Constructor Tests" begin
-    struct FixedClock <: AbstractClock
+    struct FixedClock <: AbstractEpochClock
         now_ms::Int64
     end
     Clocks.time_millis(c::FixedClock) = c.now_ms
@@ -16,7 +22,7 @@
     
     @testset "Constructor with clock" begin
         node_id = 456
-        clock = EpochClock()
+        clock = SystemEpochClock()
         generator = SnowflakeIdGenerator(node_id, clock)
         
         @test SnowflakeId.node_id(generator) == node_id
@@ -30,7 +36,7 @@
         sequence_bits = 14
         node_id = 100
         timestamp_offset_ms = 1000
-        clock = EpochClock()
+        clock = SystemEpochClock()
         
         generator = SnowflakeIdGenerator(node_id_bits, sequence_bits, node_id, timestamp_offset_ms, clock)
         
@@ -41,33 +47,33 @@
     end
     
     @testset "Constructor validation - negative node_id_bits" begin
-        @test_throws ArgumentError SnowflakeIdGenerator(-1, 12, 1, 0, EpochClock())
+        @test_throws ArgumentError SnowflakeIdGenerator(-1, 12, 1, 0, SystemEpochClock())
     end
     
     @testset "Constructor validation - negative sequence_bits" begin
-        @test_throws ArgumentError SnowflakeIdGenerator(10, -1, 1, 0, EpochClock())
+        @test_throws ArgumentError SnowflakeIdGenerator(10, -1, 1, 0, SystemEpochClock())
     end
     
     @testset "Constructor validation - too many bits" begin
         # MAX_NODE_ID_AND_SEQUENCE_BITS = 22
-        @test_throws ArgumentError SnowflakeIdGenerator(15, 10, 1, 0, EpochClock())  # 15 + 10 = 25 > 22
+        @test_throws ArgumentError SnowflakeIdGenerator(15, 10, 1, 0, SystemEpochClock())  # 15 + 10 = 25 > 22
     end
     
     @testset "Constructor validation - negative node_id" begin
-        @test_throws ArgumentError SnowflakeIdGenerator(10, 12, -1, 0, EpochClock())
+        @test_throws ArgumentError SnowflakeIdGenerator(10, 12, -1, 0, SystemEpochClock())
     end
     
     @testset "Constructor validation - node_id too large" begin
         # With 8 bits, max node_id is 2^8 - 1 = 255
-        @test_throws ArgumentError SnowflakeIdGenerator(8, 12, 256, 0, EpochClock())
+        @test_throws ArgumentError SnowflakeIdGenerator(8, 12, 256, 0, SystemEpochClock())
     end
     
     @testset "Constructor validation - negative timestamp_offset_ms" begin
-        @test_throws ArgumentError SnowflakeIdGenerator(10, 12, 1, -1, EpochClock())
+        @test_throws ArgumentError SnowflakeIdGenerator(10, 12, 1, -1, SystemEpochClock())
     end
     
     @testset "Constructor validation - timestamp_offset_ms in future" begin
-        clock = EpochClock()
+        clock = SystemEpochClock()
         future_offset = time_millis(clock) + 10000  # 10 seconds in future
         @test_throws ArgumentError SnowflakeIdGenerator(10, 12, 1, future_offset, clock)
     end
@@ -80,8 +86,8 @@
     
     @testset "Boundary values" begin
         # Test boundary values that should work
-        @test_nowarn SnowflakeIdGenerator(0, 22, 0, 0, EpochClock())  # Min node_id_bits, max sequence_bits
-        @test_nowarn SnowflakeIdGenerator(22, 0, 0, 0, EpochClock())  # Max node_id_bits, min sequence_bits
-        @test_nowarn SnowflakeIdGenerator(11, 11, 2^11-1, 0, EpochClock())  # Max node_id for 11 bits
+        @test_nowarn SnowflakeIdGenerator(0, 22, 0, 0, SystemEpochClock())  # Min node_id_bits, max sequence_bits
+        @test_nowarn SnowflakeIdGenerator(22, 0, 0, 0, SystemEpochClock())  # Max node_id_bits, min sequence_bits
+        @test_nowarn SnowflakeIdGenerator(11, 11, 2^11-1, 0, SystemEpochClock())  # Max node_id for 11 bits
     end
 end

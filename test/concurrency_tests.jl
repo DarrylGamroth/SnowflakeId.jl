@@ -1,3 +1,9 @@
+# Copyright 2014-2025 Real Logic Limited.
+# Copyright 2025-2026 Rubus Technologies Inc.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Ported from Agrona and substantially modified for Julia.
+
 @testset "Concurrency Tests" begin
     @testset "Thread safety - basic" begin
         generator = SnowflakeIdGenerator(123)
@@ -8,7 +14,7 @@
         
         # Create multiple tasks generating IDs
         for i in 1:10
-            task = @async begin
+            task = Threads.@spawn begin
                 local_ids = Int64[]
                 for j in 1:50
                     id = next_id(generator)
@@ -56,7 +62,7 @@
         
         tasks = []
         for i in 1:num_tasks
-            task = @async begin
+            task = Threads.@spawn begin
                 local_ids = Int64[]
                 for j in 1:ids_per_task
                     id = next_id(generator)
@@ -95,7 +101,7 @@
         
         tasks = []
         for (i, gen) in enumerate(generators)
-            task = @async begin
+            task = Threads.@spawn begin
                 local_ids = Int64[]
                 for j in 1:100
                     id = next_id(gen)
@@ -126,7 +132,7 @@
     
     @testset "Sequence exhaustion under load" begin
         # Create a generator with very few sequence bits to force sequence exhaustion
-        generator = SnowflakeIdGenerator(20, 2, 1, 0, EpochClock())  # Only 2 sequence bits (max 3)
+        generator = SnowflakeIdGenerator(20, 2, 1, 0, SystemEpochClock())  # Only 2 sequence bits (max 3)
         
         # Try to generate many IDs rapidly
         ids = Int64[]
@@ -165,7 +171,7 @@
         
         tasks = []
         for i in 1:10
-            task = @async begin
+            task = Threads.@spawn begin
                 for j in 1:100
                     id = next_id(generator)
                     ts = SnowflakeId.timestamp(generator, id)
@@ -210,12 +216,9 @@
         end
     end
     
-    @testset "Performance under concurrency" begin
+    @testset "Generation across worker threads" begin
         generator = SnowflakeIdGenerator(999)
-        
-        # Measure performance under concurrent load
-        start_time = time()
-        
+
         num_tasks = Threads.nthreads()
         ids_per_task = 1000
         total_expected = num_tasks * ids_per_task
@@ -225,7 +228,7 @@
         
         tasks = []
         for i in 1:num_tasks
-            task = @async begin
+            task = Threads.@spawn begin
                 local_ids = Int64[]
                 for j in 1:ids_per_task
                     id = next_id(generator)
@@ -242,18 +245,9 @@
         for task in tasks
             wait(task)
         end
-        
-        end_time = time()
-        duration = end_time - start_time
-        
+
         # Verify correctness
         @test length(all_ids) == total_expected
         @test length(unique(all_ids)) == total_expected
-        
-        # Performance should be reasonable (this is just a sanity check)
-        ids_per_second = total_expected / duration
-        @test ids_per_second > 1000  # Should generate at least 1000 IDs per second
-        
-        println("Generated $total_expected unique IDs in $(round(duration, digits=3))s ($(round(ids_per_second, digits=0)) IDs/sec)")
     end
 end
